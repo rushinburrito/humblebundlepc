@@ -1,12 +1,6 @@
 ﻿#Get Script Current Location
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-#Check bundle type. Must specify "weekly" or "regular" when calling the script
-$bundleType = $args[0]
-if ($bundleType -ne "weekly" -and $bundleType -ne "regular") {
-    break
-    }
-
 #Random script delay of 0-60 seconds
 $delay_seconds = get-random -Minimum 0 -Maximum 30
 Start-Sleep $delay_seconds
@@ -49,29 +43,25 @@ function Update-Price ([string]$price) {
     
 }
 
-$filename = $scriptpath+'\humblebundle'+$bundleType+'.txt'
+$filename = $scriptpath+'\humblebundleregular.txt'
 if (!(Test-Path $filename)) {
-    "1/1/2000`r`nPay more than the average of `$99.99" | Out-File $filename
+    "99.99" | Out-File $filename
     Write-Host $filename 'created'
 }
 $prev_price = Get-Content $filename
-$price_array = $prev_price | Select-String "Pay"
-$price_array = $price_array | Sort-Object
+$price_array = $prev_price | Select-String '\d+\.\d+' | Sort-Object
 
-if ($bundleType -eq "weekly") {
-    $bundle_uri = 'http://www.humblebundle.com/weekly'
-}
-else {
-    $bundle_uri = 'http://www.humblebundle.com/'
-}
+$bundle_uri = 'http://www.humblebundle.com/'
 
+# Main function
 
 $page = Read-HtmlPage($bundle_uri)
-$price = $page.getElementsByTagName('div') | where 'classname' -like '*price bta ' | select -ExpandProperty innertext
+$price = $page.getElementsByTagName('h2') | where 'classname' -like '*dd-header-headline*' | select -ExpandProperty innertext
+$price | % { if ($_ -match '\d+\.\d+') { $averageprice = $Matches[0] } }
 
 # Launch browser if historically lowest price. Default browser is used.
-if ($price -and $price -lt $price_array[0]) {
+if ($averageprice -and $averageprice -lt $price_array[0]) {
     Invoke-Expression "cmd /C start $bundle_uri"
 }
-
-Update-Price($price)
+Write-Host $filename 'Lowest price is' $price_array[0] 'and current price is ' $averageprice
+Update-Price($averageprice)
