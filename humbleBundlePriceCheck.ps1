@@ -2,7 +2,7 @@
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
 # Definitions
-$pricelog = $scriptpath+'\humblebundleregular.txt'
+$pricelog = $scriptpath+'\humblebundleprice.txt'
 $bundlenamefile = $scriptPath+'\humblebundlename.txt'
 $price_array=@{}
 $userAgent = [Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer
@@ -14,12 +14,12 @@ function Update-Price ([string]$price) {
         Get-Date -Format G | Out-File -Append $pricelog
         $price | Out-File -Append $pricelog
     }
-    elseif ($price -and $previousprice[$previousprice.Count-1] -ne $price) {
+    elseif ($price -gt 0 -and $previousprice[$previousprice.Count-1] -ne $price) {
         Write-Host $price '!=' $previousprice[$previousprice.Count-1] ' so file updated'
         Get-Date -Format G | Out-File -Append $pricelog
         $price | Out-File -Append $pricelog
     }
-    elseif (!($price)) {
+    elseif (!($price) -or ($price -eq 0)) {
         Write-Host 'price not defined'
     }
     else {
@@ -58,6 +58,7 @@ if (!(Test-Path $bundlenamefile)) {
 # Values in the pubnub_url have been determined by loading the Humble Bundle site and watching network traffic in
 # developer tools in Chrome on the humble bundle site. It regularly makes calls to pubnub once the page has loaded.
 # The hardcoded values below were determined by comparing requests of different bundles and determining a URL pattern
+$bundlename = Get-Content $bundlenamefile
 $pubnub_url = 'https://ps.pubnub.com/subscribe/6b5eeae3-796b-11df-8b2d-ef048cc31d2e/humble' + $bundlename + '/0/15086161607336235'
 $pubnub_response = (Invoke-WebRequest -UseBasicParsing -Uri $pubnub_url -UserAgent $userAgent).Content
 $pubnub_json = $pubnub_response.ToString() | ConvertFrom-Json
